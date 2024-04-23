@@ -50,7 +50,7 @@ class Game {
   _createShip(scene, camera) {
     const shipBody = new THREE.Mesh(
       new THREE.TetrahedronBufferGeometry(0.4),
-      new THREE.MeshBasicMaterial({ color: 0xbbccdd }),
+      new THREE.MeshBasicMaterial({ color: 0xbbccff }),
     );
     shipBody.rotateX(45 * Math.PI / 180);
     shipBody.rotateY(45 * Math.PI / 180);
@@ -103,7 +103,7 @@ class Game {
     this.speedZ = 5;
     
     let divisions = 30;
-    let gridLimit = 200;
+    let gridLimit = 60;
     this.grid = new THREE.GridHelper(gridLimit * 2, divisions, 0xccddee, 0xccddee);
 
     const moveableZ = [];
