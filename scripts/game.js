@@ -13,6 +13,8 @@ class Game {
   
   update() {
     // recompute the game state
+    this.time += this.clock.getDelta();
+  
     this._updateGrid();
     this._checkCollisions();
     this._updateInfoPanel();
@@ -28,6 +30,7 @@ class Game {
   _updateGrid() {
     // "move" the grid backwards so that it
     // feels like we're moving forward
+    this.grid.material.uniforms.time.value = this.time;
   }
   _checkCollisions() {
     // check obstacles
@@ -153,6 +156,9 @@ class Game {
     });
 
     scene.add(this.grid);
+
+    this.time = 0;
+    this.clock = new THREE.Clock();
   }
 
   
