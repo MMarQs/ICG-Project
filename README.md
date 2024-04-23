@@ -1,4 +1,4 @@
-Space Wars
-Introdução à Computação Gráfica
+# Space Wars
+Projeto para a unidade curricular Introdução à Computação Gráfica
 
-https://mmarqs.github.io/Space-Wars/
+You can play the demo [here]([https://mmarqs.github.io/Space-Wars/]).
