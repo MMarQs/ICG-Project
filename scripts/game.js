@@ -7,6 +7,8 @@ class Game {
   constructor(scene, camera) {
     // initialize variables
     this.speedZ = 20;
+    this.speedX = 0; // -1: left, 0: straight, 1: right
+    this.translateX = 0;
 
     // prepare 3D scene
     this._initializeScene(scene, camera);
@@ -20,22 +22,45 @@ class Game {
     // recompute the game state
     this.time += this.clock.getDelta();
   
+    this.translateX += this.speedX * 0.15;
+  
     this._updateGrid();
     this._checkCollisions();
     this._updateInfoPanel();
   }
   
   _keydown(event) {
-    // check for the key to move the ship accordingly
+    let newSpeedX;
+    switch (event.key) {
+      case 'ArrowLeft':
+        newSpeedX = 1.0;
+        break;
+      case 'ArrowRight':
+        newSpeedX = -1.0;
+        break;
+      case 'a':
+        newSpeedX = 1.0;
+        break;
+      case 'd':
+        newSpeedX = -1.0;
+        break;
+      default:
+        return;
+    }
+  
+    this.speedX = newSpeedX;
   }
 
   _keyup() {
-    // reset to "idle" mode
+    this.speedX = 0;
   }
 
   _updateGrid() {
     this.grid.material.uniforms.time.value = this.speedZ * this.time;
     this.objectsParent.position.z = this.speedZ * 5 * this.time;
+
+    this.grid.material.uniforms.translateX.value = this.translateX;
+    this.objectsParent.position.x = this.translateX;
     
     this.objectsParent.traverse((child) => {
       if (child instanceof THREE.Mesh) {
@@ -129,16 +154,22 @@ class Game {
     let gridLimit = 100; // 60
     this.grid = new THREE.GridHelper(gridLimit * 2, divisions, 0xccddee, 0xccddee);
 
+    const moveableX = [];
     const moveableZ = [];
     for (let i = 0; i <= divisions; i++) {
+      moveableX.push(0, 0, 1, 1); // vertical lines
       moveableZ.push(1, 1, 0, 0); // move horizontal lines only (1 - point is moveable)
     }
+    this.grid.geometry.setAttribute('moveableX', new THREE.BufferAttribute(new Uint8Array(moveableX), 1));
     this.grid.geometry.setAttribute('moveableZ', new THREE.BufferAttribute(new Uint8Array(moveableZ), 1));
 
     this.grid.material = new THREE.ShaderMaterial({
       uniforms: {
         speedZ: {
           value: this.speedZ
+        },
+        translateX: {
+          value: this.translateX
         },
         gridLimits: {
           value: new THREE.Vector2(-gridLimit, gridLimit)
@@ -151,7 +182,9 @@ class Game {
         uniform float time;
         uniform vec2 gridLimits;
         uniform float speedZ;
+        uniform float translateX;
         
+        attribute float moveableX;
         attribute float moveableZ;
         
         varying vec3 vColor;
@@ -160,6 +193,11 @@ class Game {
           vColor = color;
           float limLen = gridLimits.y - gridLimits.x;
           vec3 pos = position;
+          if (floor(moveableX + 0.5) > 0.5) { // if a point has "moveableX" attribute = 1 
+            float xDist = translateX;
+            float curXPos = mod((pos.x + xDist) - gridLimits.x, limLen) + gridLimits.x;
+            pos.x = curXPos;
+          }
           if (floor(moveableZ + 0.5) > 0.5) { // if a point has "moveableZ" attribute = 1 
             float zDist = speedZ * time;
             float curZPos = mod((pos.z + zDist) - gridLimits.x, limLen) + gridLimits.x;
