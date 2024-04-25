@@ -1,15 +1,13 @@
 class Game {
 
-  _randomFloat(min, max) {
-    return Math.random() * (max - min) + min;
-  }
-
   OBSTACLE_PREFAB = new THREE.BoxBufferGeometry(1, 1, 1);
   OBSTACLE_MATERIAL = new THREE.MeshBasicMaterial({ color: 0xCCDEEE });
+  BONUS_PREFAB = new THREE.SphereBufferGeometry(1, 12, 12);
 
   constructor(scene, camera) {
     // initialize variables
-    
+    this.speedZ = 20;
+
     // prepare 3D scene
     this._initializeScene(scene, camera);
 
@@ -34,15 +32,34 @@ class Game {
   _keyup() {
     // reset to "idle" mode
   }
+
   _updateGrid() {
-    // "move" the grid backwards so that it
-    // feels like we're moving forward
-    this.grid.material.uniforms.time.value = this.time;
+    this.grid.material.uniforms.time.value = this.speedZ * this.time;
+    this.objectsParent.position.z = this.speedZ * 5 * this.time;
+    
+    this.objectsParent.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        // z-position in world space
+        const childZPos = child.position.z + this.objectsParent.position.z;
+        if (childZPos > 0) {
+          // reset the object
+          const params = [child, this.ship.position.x, -this.objectsParent.position.z];
+          if (child.userData.type === 'obstacle') {
+            this._setupObstacle(...params);
+          }
+          else {
+            this._setupBonus(...params);
+          }
+        }
+      }
+    });
   }
+
   _checkCollisions() {
     // check obstacles
     // check bonuses
   }
+
   _updateInfoPanel() {
     // update DOM elements to show the
     // current state of the game
@@ -105,12 +122,11 @@ class Game {
     reactorLight3.position.set(0, -0.15, 0.11);
   }
   
-  
   _createGrid(scene) {
     this.speedZ = 5;
     
     let divisions = 30;
-    let gridLimit = 200; // 60
+    let gridLimit = 100; // 60
     this.grid = new THREE.GridHelper(gridLimit * 2, divisions, 0xccddee, 0xccddee);
 
     const moveableZ = [];
@@ -168,7 +184,6 @@ class Game {
     this.clock = new THREE.Clock();
   }
 
-  
   _initializeScene(scene, camera) {
     this._createShip(scene, camera);
     this._createGrid(scene, camera);
@@ -179,6 +194,9 @@ class Game {
     // spawn 10 obstacles
     for (let i = 0; i < 10; i++)
       this._spawnObstacle();
+    // spawn 10 bonuses
+    for (let i = 0; i < 10; i++)
+      this._spawnBonus();
   
     camera.rotateX(-20 * Math.PI / 180);
     camera.position.set(0, 1.5, 2);
@@ -194,6 +212,7 @@ class Game {
     this._setupObstacle(obj);
     
     this.objectsParent.add(obj);
+    obj.userData = { type: 'obstacle' };
   }
 
   _setupObstacle(obj, refXPos = 0, refZPos = 0) {
@@ -208,11 +227,44 @@ class Game {
     obj.position.set(
       refXPos + this._randomFloat(-30, 30),
       obj.scale.y * 0.5,
-      refZPos - 100 - this._randomFloat(0, 100)
+      refZPos - 50 - this._randomFloat(0, 50)
     );
   }
 
   _spawnBonus() {
+    const obj = new THREE.Mesh(
+      this.BONUS_PREFAB,
+      new THREE.MeshBasicMaterial({ color: 0x000000 })
+    );
+    this._setupBonus(obj);
+    this.objectsParent.add(obj);
+    obj.userData = { type: 'bonus' };
+  }
 
+  _setupBonus(obj, refXPos = 0, refZPos = 0) {
+    const value = this._randomInt(5, 20);
+    const ratio = value / 20;
+  
+    const size = ratio * 0.5;
+    obj.scale.set(size, size, size);
+  
+    const hue = 0.5 + 0.5 * ratio;
+    obj.material.color.setHSL(hue, 1, 0.5);
+  
+    obj.position.set(
+      refXPos + this._randomFloat(-30, 30),
+      obj.scale.y * 0.5,
+      refZPos - 50 - this._randomFloat(0, 50)
+    );
+  }
+
+  _randomFloat(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+
+  _randomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 }
