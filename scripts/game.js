@@ -1,5 +1,12 @@
 class Game {
 
+  _randomFloat(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+
+  OBSTACLE_PREFAB = new THREE.BoxBufferGeometry(1, 1, 1);
+  OBSTACLE_MATERIAL = new THREE.MeshBasicMaterial({ color: 0xCCDEEE });
+
   constructor(scene, camera) {
     // initialize variables
     
@@ -50,7 +57,7 @@ class Game {
   _createShip(scene, camera) {
     const shipBody = new THREE.Mesh(
       new THREE.TetrahedronBufferGeometry(0.4),
-      new THREE.MeshBasicMaterial({ color: 0xbbccff }),
+      new THREE.MeshBasicMaterial({ color: 0x8BD5F7 }), // 9ACF97
     );
     shipBody.rotateX(45 * Math.PI / 180);
     shipBody.rotateY(45 * Math.PI / 180);
@@ -63,7 +70,7 @@ class Game {
     camera.position.z = 5;
 
     const reactorSocketGeometry = new THREE.CylinderBufferGeometry(0.08, 0.08, 0.1, 16);
-    const reactorSocketMaterial = new THREE.MeshBasicMaterial({ color: 0x99aacc });
+    const reactorSocketMaterial = new THREE.MeshBasicMaterial({ color: 0xC597CF });
 
     const reactorSocket1 = new THREE.Mesh(reactorSocketGeometry, reactorSocketMaterial);
     const reactorSocket2 = new THREE.Mesh(reactorSocketGeometry, reactorSocketMaterial);
@@ -81,7 +88,7 @@ class Game {
     reactorSocket3.position.set(0, -0.15, 0.1);
 
     const reactorLightGeometry = new THREE.CylinderBufferGeometry(0.055, 0.055, 0.1, 16);
-    const reactorLightMaterial = new THREE.MeshBasicMaterial({ color: 0xaadeff });
+    const reactorLightMaterial = new THREE.MeshBasicMaterial({ color: 0xF5E571 });
 
     const reactorLight1 = new THREE.Mesh(reactorLightGeometry, reactorLightMaterial);
     const reactorLight2 = new THREE.Mesh(reactorLightGeometry, reactorLightMaterial);
@@ -103,7 +110,7 @@ class Game {
     this.speedZ = 5;
     
     let divisions = 30;
-    let gridLimit = 60;
+    let gridLimit = 200; // 60
     this.grid = new THREE.GridHelper(gridLimit * 2, divisions, 0xccddee, 0xccddee);
 
     const moveableZ = [];
@@ -164,9 +171,48 @@ class Game {
   
   _initializeScene(scene, camera) {
     this._createShip(scene, camera);
-    this._createGrid(scene);
-
+    this._createGrid(scene, camera);
+  
+    this.objectsParent = new THREE.Group();
+    scene.add(this.objectsParent);
+  
+    // spawn 10 obstacles
+    for (let i = 0; i < 10; i++)
+      this._spawnObstacle();
+  
     camera.rotateX(-20 * Math.PI / 180);
     camera.position.set(0, 1.5, 2);
+  }
+
+  _spawnObstacle() {
+    const obj = new THREE.Mesh(
+      this.OBSTACLE_PREFAB,
+      this.OBSTACLE_MATERIAL
+    );
+    
+    // add randomness!
+    this._setupObstacle(obj);
+    
+    this.objectsParent.add(obj);
+  }
+
+  _setupObstacle(obj, refXPos = 0, refZPos = 0) {
+    // random scale
+    obj.scale.set(
+      this._randomFloat(0.5, 2),
+      this._randomFloat(0.5, 2),
+      this._randomFloat(0.5, 2)
+    );
+
+    // random position
+    obj.position.set(
+      refXPos + this._randomFloat(-30, 30),
+      obj.scale.y * 0.5,
+      refZPos - 100 - this._randomFloat(0, 100)
+    );
+  }
+
+  _spawnBonus() {
+
   }
 }
