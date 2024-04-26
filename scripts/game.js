@@ -1,7 +1,7 @@
 class Game {
 
   OBSTACLE_PREFAB = new THREE.BoxBufferGeometry(1, 1, 1);
-  OBSTACLE_MATERIAL = new THREE.MeshBasicMaterial({ color: 0xCCDEEE });
+  OBSTACLE_MATERIAL = new THREE.MeshBasicMaterial({ color: 0xccdeee });
   BONUS_PREFAB = new THREE.SphereBufferGeometry(1, 12, 12);
 
   constructor(scene, camera) {
@@ -9,6 +9,8 @@ class Game {
     this.speedZ = 20;
     this.speedX = 0; // -1: left, 0: straight, 1: right
     this.translateX = 0;
+    
+    this.rotationLerp = null;
 
     // prepare 3D scene
     this._initializeScene(scene, camera);
@@ -20,9 +22,13 @@ class Game {
   
   update() {
     // recompute the game state
-    this.time += this.clock.getDelta();
+    const timeDelta = this.clock.getDelta();
+    this.time += timeDelta;
   
-    this.translateX += this.speedX * 0.15;
+    if (this.rotationLerp !== null)
+      this.rotationLerp.update(timeDelta);
+  
+    this.translateX += this.speedX * -0.2;
   
     this._updateGrid();
     this._checkCollisions();
@@ -32,43 +38,43 @@ class Game {
   _keydown(event) {
     let newSpeedX;
     switch (event.key) {
-      case 'ArrowLeft':
-        newSpeedX = 1.0;
+      case 'ArrowLeft': 
+      case 'a':
+        newSpeedX = -1.0;
         break;
       case 'ArrowRight':
-        newSpeedX = -1.0;
-        break;
-      case 'a':
-        newSpeedX = 1.0;
-        break;
       case 'd':
-        newSpeedX = -1.0;
+        newSpeedX = 1.0;
         break;
       default:
         return;
     }
   
-    this.speedX = newSpeedX;
+    if (this.speedX !== newSpeedX) {
+      this.speedX = newSpeedX;
+      this._rotateShip(-this.speedX * 20 * Math.PI / 180, 0.8);
+    }
   }
 
   _keyup() {
     this.speedX = 0;
+    this._rotateShip(0, 0.5);
   }
 
   _updateGrid() {
-    this.grid.material.uniforms.time.value = this.speedZ * this.time;
-    this.objectsParent.position.z = this.speedZ * 5 * this.time;
-
+    this.grid.material.uniforms.time.value = this.time;
+    this.objectsParent.position.z = this.speedZ * this.time;
+    
     this.grid.material.uniforms.translateX.value = this.translateX;
     this.objectsParent.position.x = this.translateX;
     
     this.objectsParent.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        // z-position in world space
+        // pos in world space
         const childZPos = child.position.z + this.objectsParent.position.z;
         if (childZPos > 0) {
           // reset the object
-          const params = [child, this.ship.position.x, -this.objectsParent.position.z];
+          const params = [child, this.translateX, -this.objectsParent.position.z];
           if (child.userData.type === 'obstacle') {
             this._setupObstacle(...params);
           }
@@ -99,7 +105,7 @@ class Game {
   _createShip(scene, camera) {
     const shipBody = new THREE.Mesh(
       new THREE.TetrahedronBufferGeometry(0.4),
-      new THREE.MeshBasicMaterial({ color: 0x8BD5F7 }), // 9ACF97
+      new THREE.MeshBasicMaterial({ color: 0xbbccdd }),
     );
     shipBody.rotateX(45 * Math.PI / 180);
     shipBody.rotateY(45 * Math.PI / 180);
@@ -112,7 +118,7 @@ class Game {
     camera.position.z = 5;
 
     const reactorSocketGeometry = new THREE.CylinderBufferGeometry(0.08, 0.08, 0.1, 16);
-    const reactorSocketMaterial = new THREE.MeshBasicMaterial({ color: 0xC597CF });
+    const reactorSocketMaterial = new THREE.MeshBasicMaterial({ color: 0x99aacc });
 
     const reactorSocket1 = new THREE.Mesh(reactorSocketGeometry, reactorSocketMaterial);
     const reactorSocket2 = new THREE.Mesh(reactorSocketGeometry, reactorSocketMaterial);
@@ -130,7 +136,7 @@ class Game {
     reactorSocket3.position.set(0, -0.15, 0.1);
 
     const reactorLightGeometry = new THREE.CylinderBufferGeometry(0.055, 0.055, 0.1, 16);
-    const reactorLightMaterial = new THREE.MeshBasicMaterial({ color: 0xF5E571 });
+    const reactorLightMaterial = new THREE.MeshBasicMaterial({ color: 0xaadeff });
 
     const reactorLight1 = new THREE.Mesh(reactorLightGeometry, reactorLightMaterial);
     const reactorLight2 = new THREE.Mesh(reactorLightGeometry, reactorLightMaterial);
@@ -146,12 +152,10 @@ class Game {
     reactorLight3.rotateX(90 * Math.PI / 180);
     reactorLight3.position.set(0, -0.15, 0.11);
   }
-  
-  _createGrid(scene) {
-    this.speedZ = 5;
-    
+   
+  _createGrid(scene) {    
     let divisions = 30;
-    let gridLimit = 100; // 60
+    let gridLimit = 100;
     this.grid = new THREE.GridHelper(gridLimit * 2, divisions, 0xccddee, 0xccddee);
 
     const moveableX = [];
@@ -222,24 +226,6 @@ class Game {
     this.clock = new THREE.Clock();
   }
 
-  _initializeScene(scene, camera) {
-    this._createShip(scene, camera);
-    this._createGrid(scene, camera);
-  
-    this.objectsParent = new THREE.Group();
-    scene.add(this.objectsParent);
-  
-    // spawn 10 obstacles
-    for (let i = 0; i < 10; i++)
-      this._spawnObstacle();
-    // spawn 10 bonuses
-    for (let i = 0; i < 10; i++)
-      this._spawnBonus();
-  
-    camera.rotateX(-20 * Math.PI / 180);
-    camera.position.set(0, 1.5, 2);
-  }
-
   _spawnObstacle() {
     const obj = new THREE.Mesh(
       this.OBSTACLE_PREFAB,
@@ -248,7 +234,6 @@ class Game {
     
     // add randomness!
     this._setupObstacle(obj);
-    
     this.objectsParent.add(obj);
     obj.userData = { type: 'obstacle' };
   }
@@ -278,7 +263,7 @@ class Game {
     this.objectsParent.add(obj);
     obj.userData = { type: 'bonus' };
   }
-
+  
   _setupBonus(obj, refXPos = 0, refZPos = 0) {
     const value = this._randomInt(5, 20);
     const ratio = value / 20;
@@ -295,6 +280,31 @@ class Game {
       refZPos - 50 - this._randomFloat(0, 50)
     );
   }
+  
+  _initializeScene(scene, camera) {
+    this._createShip(scene, camera);
+    this._createGrid(scene);
+
+    this.objectsParent = new THREE.Group();
+    scene.add(this.objectsParent);
+
+    // spawn 10 obstacles
+    for (let i = 0; i < 10; i++)
+      this._spawnObstacle();
+    // spawn 10 bonuses
+    for (let i = 0; i < 10; i++)
+      this._spawnBonus();
+
+    camera.rotateX(-20 * Math.PI / 180);
+    camera.position.set(0, 1.5, 2);
+  }
+
+  _rotateShip(targetRotation, delay) {
+    const $this = this;
+    this.rotationLerp = new Lerp(this.ship.rotation.z, targetRotation, delay)
+      .onUpdate((value) => { $this.ship.rotation.z = value })
+      .onFinish(() => { $this.rotationLerp = null });
+  }
 
   _randomFloat(min, max) {
     return Math.random() * (max - min) + min;
@@ -305,4 +315,5 @@ class Game {
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
+
 }
