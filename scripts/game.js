@@ -69,7 +69,7 @@ class Game {
     if (this.rotationLerp !== null)
       this.rotationLerp.update(timeDelta);
   
-    this.translateX += this.speedX * -0.2;
+    this.translateX += this.speedX * -0.6;
   
     this._updateGrid();
     this._checkCollisions();
@@ -282,6 +282,9 @@ class Game {
             float curZPos = mod((pos.z + zDist) - gridLimits.x, limLen) + gridLimits.x;
             pos.z = curZPos;
           }
+          // compute the fog-like gradient
+          float k = 1.0 - (-pos.z / 200.0);
+          vColor = color * k;        
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
       `,
