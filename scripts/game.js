@@ -8,14 +8,27 @@ class Game {
 
   constructor(scene, camera) {
     // initialize variables
+    this.running = false;
     this.speedZ = 20;
     this.speedX = 0; // -1: left, 0: straight, 1: right
     this.translateX = 0;
     this.health = 100;
     this.score = 0;
 
-    this.divHealth = document.getElementById('health');
+    // html dom elements
     this.divScore = document.getElementById('score');
+    this.divDistance = document.getElementById('distance');
+    this.divHealth = document.getElementById('health');
+
+    document.getElementById('start-button').onclick = () => {
+      this.running = true;
+      document.getElementById('intro-panel').style.display = 'none';
+    };
+
+    // initialize displays with start values
+    this.divScore.innerText = this.score;
+    this.divDistance.innerText = 0;
+    this.divHealth.value = this.health;
     
     this.rotationLerp = null;
 
@@ -28,6 +41,9 @@ class Game {
   }
   
   update() {
+    if (!this.running)
+      return
+
     // recompute the game state
     const timeDelta = this.clock.getDelta();
     this.time += timeDelta;
@@ -111,7 +127,7 @@ class Game {
           const params = [child, -this.translateX, -this.objectsParent.position.z];
           if (child.userData.type === 'obstacle') {
             this.health -= 10;
-            this.divHealth.innerText = this.health;
+            this.divHealth.value = this.health;
             this._setupObstacle(...params);
           }
           else {
@@ -125,9 +141,7 @@ class Game {
   }
 
   _updateInfoPanel() {
-    // update DOM elements to show the
-    // current state of the game
-    // (traveled distance, score, lives...)
+    this.divDistance.innerText = this.objectsParent.position.z.toFixed(0);
   }
   
   _gameOver() {
