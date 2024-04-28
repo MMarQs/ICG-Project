@@ -34,6 +34,27 @@ class Game {
     document.addEventListener('keydown', this._keydown.bind(this));
     document.addEventListener('keyup', this._keyup.bind(this));
   }
+  
+  update() {
+    if (!this.running)
+      return
+
+    // recompute the game state
+    const timeDelta = this.clock.getDelta();
+    this.time += timeDelta;
+  
+    if (this.rotationLerp !== null)
+      this.rotationLerp.update(timeDelta);
+  
+    this.translateX += this.speedX * -0.4;
+  
+    this._updateGrid();
+    this._checkCollisions();
+    this._updateInfoPanel();
+
+    if (this.cameraLerp !== null)
+    this.cameraLerp.update(timeDelta);
+  }
 
   _reset(firstTime) {
     this.speedZ = 20;
@@ -56,24 +77,7 @@ class Game {
     this.divHealth.value = this.health;
   
     this._initializeScene(this.scene, this.camera,  firstTime);
-  }
-  
-  update() {
-    if (!this.running)
-      return
-
-    // recompute the game state
-    const timeDelta = this.clock.getDelta();
-    this.time += timeDelta;
-  
-    if (this.rotationLerp !== null)
-      this.rotationLerp.update(timeDelta);
-  
-    this.translateX += this.speedX * -0.6;
-  
-    this._updateGrid();
-    this._checkCollisions();
-    this._updateInfoPanel();
+    this.cameraLerp = null;
   }
   
   _keydown(event) {
@@ -103,6 +107,9 @@ class Game {
   }
 
   _updateGrid() {
+    this.speedZ += 0.002;
+    this.grid.material.uniforms.speedZ.value = this.speedZ;
+
     this.grid.material.uniforms.time.value = this.time;
     this.objectsParent.position.z = this.speedZ * this.time;
     
@@ -144,6 +151,11 @@ class Game {
         {
           const params = [child, -this.translateX, -this.objectsParent.position.z];
           if (child.userData.type === 'obstacle') {
+            this._shakeCamera({
+              x: this.camera.position.x,
+              y: this.camera.position.y,
+              z: this.camera.position.z,
+            });
             this.health -= 10;
             this.divHealth.value = this.health;
             this._setupObstacle(...params);
@@ -151,6 +163,8 @@ class Game {
               this._gameOver();
           }
           else {
+            this._createScorePopup(child.userData.value);
+
             this.score += child.userData.value;
             this.divScore.innerText = this.score;
             child.userData.value = this._setupBonus(...params);
@@ -158,6 +172,53 @@ class Game {
         }
       }
     });
+  }
+
+  _createScorePopup(score) {
+    const scorePopup = document.createElement('div');
+    scorePopup.innerText = `+${score}`;
+    scorePopup.className = 'score-popup';
+    document.body.appendChild(scorePopup);
+    setTimeout(() => {
+      scorePopup.remove();
+    }, 1000);
+  }
+
+  _shakeCamera(initialPosition, remainingShakes = 3) {
+    const $this = this;
+    
+    const startPosition = {
+      x: this.camera.position.x,
+      y: this.camera.position.y,
+      z: this.camera.position.z,
+    };
+
+    const startOffset = { x: 0, y: 0 };
+    const endOffset = {
+      x: this._randomFloat(-0.25, 0.25),
+      y: this._randomFloat(-0.25, 0.25),
+    };
+    
+    this.cameraLerp = new Lerp(startOffset, endOffset, this._randomFloat(0.1, 0.22))
+      .onUpdate((value) => {
+        $this.camera.position.set(
+          startPosition.x + value.x,
+          startPosition.y + value.y,
+          startPosition.z
+        );
+      })
+      .onFinish(() => {
+        if (remainingShakes > 0) {
+          $this._shakeCamera(initialPosition, remainingShakes - 1);
+        } else {
+          $this.cameraLerp = null;
+          $this.camera.position.set(
+            initialPosition.x,
+            initialPosition.y,
+            initialPosition.z
+          );
+        }
+      });
   }
 
   _updateInfoPanel() {
