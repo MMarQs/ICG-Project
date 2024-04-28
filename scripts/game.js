@@ -46,7 +46,7 @@ class Game {
     if (this.rotationLerp !== null)
       this.rotationLerp.update(timeDelta);
   
-    this.translateX += this.speedX * -0.4;
+    this.translateX += this.speedX * -0.3;
   
     this._updateGrid();
     this._checkCollisions();
@@ -151,6 +151,7 @@ class Game {
         {
           const params = [child, -this.translateX, -this.objectsParent.position.z];
           if (child.userData.type === 'obstacle') {
+            playCollision(child.userData.type);
             this._shakeCamera({
               x: this.camera.position.x,
               y: this.camera.position.y,
@@ -163,6 +164,7 @@ class Game {
               this._gameOver();
           }
           else {
+            playCollision(child.userData.type);
             this._createScorePopup(child.userData.value);
 
             this.score += child.userData.value;
