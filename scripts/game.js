@@ -4,11 +4,18 @@ class Game {
   OBSTACLE_MATERIAL = new THREE.MeshBasicMaterial({ color: 0xccdeee });
   BONUS_PREFAB = new THREE.SphereBufferGeometry(1, 12, 12);
 
+  COLLISION_THRESHOLD = 0.2;
+
   constructor(scene, camera) {
     // initialize variables
     this.speedZ = 20;
     this.speedX = 0; // -1: left, 0: straight, 1: right
     this.translateX = 0;
+    this.health = 100;
+    this.score = 0;
+
+    this.divHealth = document.getElementById('health');
+    this.divScore = document.getElementById('score');
     
     this.rotationLerp = null;
 
@@ -79,7 +86,8 @@ class Game {
             this._setupObstacle(...params);
           }
           else {
-            this._setupBonus(...params);
+            const value = this._setupBonus(...params);
+            child.userData.value = value;
           }
         }
       }
@@ -87,8 +95,33 @@ class Game {
   }
 
   _checkCollisions() {
-    // check obstacles
-    // check bonuses
+    this.objectsParent.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        // pos in world space
+        const childZPos = child.position.z + this.objectsParent.position.z;
+  
+        // threshold distances
+        const thresholdX = this.COLLISION_THRESHOLD + child.scale.x / 2;
+        const thresholdZ = this.COLLISION_THRESHOLD + child.scale.z / 2;
+        
+        // check for collision
+        if (childZPos > -thresholdZ &&
+            Math.abs(child.position.x + this.translateX) < thresholdX) 
+        {
+          const params = [child, -this.translateX, -this.objectsParent.position.z];
+          if (child.userData.type === 'obstacle') {
+            this.health -= 10;
+            this.divHealth.innerText = this.health;
+            this._setupObstacle(...params);
+          }
+          else {
+            this.score += child.userData.value;
+            this.divScore.innerText = this.score;
+            child.userData.value = this._setupBonus(...params);
+          }
+        }
+      }
+    });
   }
 
   _updateInfoPanel() {
@@ -259,9 +292,9 @@ class Game {
       this.BONUS_PREFAB,
       new THREE.MeshBasicMaterial({ color: 0x000000 })
     );
-    this._setupBonus(obj);
+    const value = this._setupBonus(obj);
+    obj.userData = { type: 'bonus', value };
     this.objectsParent.add(obj);
-    obj.userData = { type: 'bonus' };
   }
   
   _setupBonus(obj, refXPos = 0, refZPos = 0) {
@@ -279,6 +312,8 @@ class Game {
       obj.scale.y * 0.5,
       refZPos - 50 - this._randomFloat(0, 50)
     );
+
+    return value;
   }
   
   _initializeScene(scene, camera) {
