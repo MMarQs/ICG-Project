@@ -7,37 +7,55 @@ class Game {
   COLLISION_THRESHOLD = 0.2;
 
   constructor(scene, camera) {
-    // initialize variables
-    this.running = false;
-    this.speedZ = 20;
-    this.speedX = 0; // -1: left, 0: straight, 1: right
-    this.translateX = 0;
-    this.health = 100;
-    this.score = 0;
-
     // html dom elements
     this.divScore = document.getElementById('score');
     this.divDistance = document.getElementById('distance');
     this.divHealth = document.getElementById('health');
 
+    this.divGameOverPanel = document.getElementById('game-over-panel');
+    this.divGameOverScore = document.getElementById('game-over-score');
+    this.divGameOverDistance = document.getElementById('game-over-distance');
+    
     document.getElementById('start-button').onclick = () => {
       this.running = true;
       document.getElementById('intro-panel').style.display = 'none';
     };
 
-    // initialize displays with start values
-    this.divScore.innerText = this.score;
-    this.divDistance.innerText = 0;
-    this.divHealth.value = this.health;
-    
-    this.rotationLerp = null;
+    document.getElementById('replay-button').onclick = () => {
+      this.running = true;
+      this.divGameOverPanel.style.display = 'none';
+    };
 
-    // prepare 3D scene
-    this._initializeScene(scene, camera);
+    this.scene = scene;
+    this.camera = camera;
+    this._reset(true);
 
     // bind event callbacks
     document.addEventListener('keydown', this._keydown.bind(this));
     document.addEventListener('keyup', this._keyup.bind(this));
+  }
+
+  _reset(firstTime) {
+    this.speedZ = 20;
+    this.speedX = 0; // -1: left, 0: straight, 1: right
+    this.translateX = 0;
+  
+    // -----> moved from _createGrid
+    this.time = 0;
+    this.clock = new THREE.Clock();
+    // ------
+  
+    this.rotationLerp = null;
+  
+    this.health = 100;
+    this.score = 0;
+        
+    // ensure display is up-to-date with values
+    this.divScore.innerText = this.score;
+    this.divDistance.innerText = 0;
+    this.divHealth.value = this.health;
+  
+    this._initializeScene(this.scene, this.camera,  firstTime);
   }
   
   update() {
@@ -129,6 +147,8 @@ class Game {
             this.health -= 10;
             this.divHealth.value = this.health;
             this._setupObstacle(...params);
+            if (this.health <= 0)
+              this._gameOver();
           }
           else {
             this.score += child.userData.value;
@@ -145,8 +165,16 @@ class Game {
   }
   
   _gameOver() {
-    // show "end state" UI
-    // reset instance variables for a new game
+    // prepare end state
+    this.running = false;
+    // (show ui)
+    this.divGameOverScore.innerText = this.score;
+    this.divGameOverDistance.innerText = this.objectsParent.position.z.toFixed(0);
+    setTimeout(() => {      
+      this.divGameOverPanel.style.display = 'grid';
+      // (reset variables)
+      this._reset(false);
+    }, 250);
   }
 
   _createShip(scene, camera) {
@@ -330,22 +358,37 @@ class Game {
     return value;
   }
   
-  _initializeScene(scene, camera) {
-    this._createShip(scene, camera);
-    this._createGrid(scene);
-
-    this.objectsParent = new THREE.Group();
-    scene.add(this.objectsParent);
-
-    // spawn 10 obstacles
-    for (let i = 0; i < 10; i++)
-      this._spawnObstacle();
-    // spawn 10 bonuses
-    for (let i = 0; i < 10; i++)
-      this._spawnBonus();
-
-    camera.rotateX(-20 * Math.PI / 180);
-    camera.position.set(0, 1.5, 2);
+  _initializeScene(scene, camera, firstTime) {
+    if (firstTime) {
+      // (first load mode)
+      this._createShip(scene, camera);
+      this._createGrid(scene, camera);
+  
+      this.objectsParent = new THREE.Group();
+      scene.add(this.objectsParent);
+  
+      for (let i = 0; i < 10; i++)
+        this._spawnObstacle();
+      for (let i = 0; i < 10; i++)
+        this._spawnBonus();
+  
+      camera.rotateX(-20 * Math.PI / 180);
+      camera.position.set(0, 1.5, 2);
+    } else {
+      this.objectsParent.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          // object inside the anchor
+          if (child.userData.type === 'obstacle')
+            this._setupObstacle(child);
+          else
+            child.userData.value = this._setupBonus(child);
+        }
+        else {
+          // the anchor itself
+          child.position.set(0, 0, 0);
+        }
+      });
+    }
   }
 
   _rotateShip(targetRotation, delay) {
