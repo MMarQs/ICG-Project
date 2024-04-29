@@ -4,7 +4,7 @@ class Game {
   OBSTACLE_MATERIAL = new THREE.MeshBasicMaterial({ color: 0xccdeee });
   BONUS_PREFAB = new THREE.SphereBufferGeometry(1, 12, 12);
 
-  COLLISION_THRESHOLD = 0.2;
+  COLLISION_THRESHOLD = .8;
 
   constructor(scene, camera) {
     // html dom elements
@@ -49,7 +49,7 @@ class Game {
     if (this.rotationLerp !== null)
       this.rotationLerp.update(timeDelta);
   
-    this.translateX += this.speedX * -0.3;
+    this.translateX += this.speedX * -0.4;
   
     this._updateGrid();
     this._checkCollisions();
