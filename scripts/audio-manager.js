@@ -1,5 +1,16 @@
-const BACKGROUND = new Audio();
-BACKGROUND.src = "./assets/music.mp3";
+function setupAudio() {
+
+    // background music
+    const musicAudio = new Howl({
+      src: ['./assets/music.mp3'],
+      autoplay: true,
+      loop: true,
+    });
+    
+    const musicId = musicAudio.play();
+    musicAudio.fade(.2, .8, 20000, musicId);
+  
+}
 
 const CRASH = new Audio();
 CRASH.src = "./assets/crash.mp3";

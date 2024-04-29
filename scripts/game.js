@@ -162,7 +162,7 @@ class Game {
               y: this.camera.position.y,
               z: this.camera.position.z,
             });
-            this.health -= 100;
+            this.health -= 10;
             this.divHealth.value = this.health;
             this._setupObstacle(...params);
             if (this.health <= 0)
