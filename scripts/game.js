@@ -16,6 +16,9 @@ class Game {
     this.divGameOverScore = document.getElementById('game-over-score');
     this.divGameOverDistance = document.getElementById('game-over-distance');
     
+    this.divBestScore = document.getElementById('best-score');
+    this.divBestDistance = document.getElementById('best-distance');
+
     document.getElementById('start-button').onclick = () => {
       this.running = true;
       document.getElementById('intro-panel').style.display = 'none';
@@ -70,7 +73,9 @@ class Game {
   
     this.health = 100;
     this.score = 0;
-        
+    this.best_score = (localStorage.getItem("best_score") || 0);
+    this.best_distance = (localStorage.getItem("best_distance") || 0);
+
     // ensure display is up-to-date with values
     this.divScore.innerText = this.score;
     this.divDistance.innerText = 0;
@@ -157,7 +162,7 @@ class Game {
               y: this.camera.position.y,
               z: this.camera.position.z,
             });
-            this.health -= 10;
+            this.health -= 100;
             this.divHealth.value = this.health;
             this._setupObstacle(...params);
             if (this.health <= 0)
@@ -232,7 +237,19 @@ class Game {
     this.running = false;
     // (show ui)
     this.divGameOverScore.innerText = this.score;
+    if(this.score > this.best_score) {
+      localStorage.setItem("best_score", this.score);
+      this.best_score = localStorage.getItem("best_score");
+    }
+    this.divBestScore.innerText = this.best_score;
+
     this.divGameOverDistance.innerText = this.objectsParent.position.z.toFixed(0);
+    if(this.objectsParent.position.z > localStorage.getItem("best_distance")) {
+      localStorage.setItem("best_distance", this.objectsParent.position.z.toFixed(0));
+      this.best_distance = localStorage.getItem("best_distance");
+    }
+    this.divBestDistance.innerText = this.best_distance;
+
     setTimeout(() => {      
       this.divGameOverPanel.style.display = 'grid';
       // (reset variables)

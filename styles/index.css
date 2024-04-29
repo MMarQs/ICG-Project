@@ -120,15 +120,19 @@ body {
 }
  
 #game-over-score-row,
-#game-over-distance-row {
+#best-score-row,
+#game-over-distance-row,
+#best-distance-row {
    display: flex;
    justify-content: center;
    font-size: 1.2rem;
    margin-bottom: 2rem;
 }
  
-#game-over-score,
-#game-over-distance {
+#game-over-score-row,
+#best-score-row,
+#game-over-distance-row,
+#best-distance-row {
    margin-left: 0.5rem;
 }
 
