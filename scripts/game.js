@@ -49,7 +49,7 @@ class Game {
     if (this.rotationLerp !== null)
       this.rotationLerp.update(timeDelta);
   
-    this.translateX += this.speedX * -0.4;
+    this.translateX += this.speedX * -0.3;
   
     this._updateGrid();
     this._checkCollisions();
